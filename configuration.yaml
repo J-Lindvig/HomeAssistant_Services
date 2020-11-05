@@ -1,0 +1,31 @@
+
+# Configure a default setup of Home Assistant (frontend, api, etc)
+default_config:
+
+#      __  __
+#     / / / /
+#    / /_/ / 
+#   / __  /  
+#  /_/ /_/   
+#
+homeassistant:
+  packages: !include_dir_merge_named include/packages/
+
+#      ____ 
+#     / __ \
+#    / /_/ /
+#   / ____/ 
+#  /_/      
+#
+python_script:
+
+#      ____ 
+#     / __ \
+#    / /_/ /
+#   / _, _/ 
+#  /_/ |_|  
+# 
+recorder:
+  db_url: !secret MYSQL_URL
+  purge_keep_days: 7
+  auto_purge: true

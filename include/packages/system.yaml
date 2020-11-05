@@ -1,0 +1,302 @@
+systemmonitor:
+
+  sensor:
+    - platform: systemmonitor
+      resources:
+        - type: last_boot
+        - type: processor_use
+        - type: processor_temperature
+        - type: memory_use_percent
+        - type: disk_use_percent
+          arg: /
+        - type: swap_use_percent
+
+    - platform: template
+      sensors:
+        service_ha_last_boot:
+          unique_id: 122281d214b74876b2a03dbff06e9254
+          friendly_name_template: "{{ state_attr('sensor.last_boot', 'friendly_name') }}"
+          icon_template: "{{ state_attr('sensor.last_boot', 'icon') }}"
+          value_template: "{{ states('sensor.last_boot') }}"
+
+        service_ha_processor_use_percent:
+          unique_id: 6cf703a042034e1f954f9ded629bd7b6
+          friendly_name_template: "{{ state_attr('sensor.processor_use_percent', 'friendly_name') }}"
+          icon_template: "{{ state_attr('sensor.processor_use_percent', 'icon') }}"
+          value_template: "{{ states('sensor.processor_use_percent') }}"
+
+        service_ha_processor_temperature:
+          unique_id: 678abb2178d341f08c180e78ba5a8c0f
+          friendly_name_template: "{{ state_attr('sensor.processor_temperature', 'friendly_name') }}"
+          icon_template: "{{ state_attr('sensor.processor_temperature', 'icon') }}"
+          value_template: "{{ states('sensor.processor_temperature') }}"
+
+        service_ha_memory_use_percent:
+          unique_id: c0584d9f00f3467684b2efc2ac09b015
+          friendly_name_template: "{{ state_attr('sensor.memory_use_percent', 'friendly_name') }}"
+          icon_template: "{{ state_attr('sensor.memory_use_percent', 'icon') }}"
+          value_template: "{{ states('sensor.memory_use_percent') }}"
+
+        service_ha_disk_use_percent:
+          unique_id: 9127c4260a614519874649bd9de2beb4
+          friendly_name_template: "{{ state_attr('sensor.disk_use_percent', 'friendly_name') }}"
+          icon_template: "{{ state_attr('sensor.disk_use_percent', 'icon') }}"
+          value_template: "{{ states('sensor.disk_use_percent') }}"
+
+        service_ha_swap_use_percent:
+          unique_id: bc03a25eb91a40888bce5ce765bfe536
+          friendly_name_template: "{{ state_attr('sensor.swap_use_percent', 'friendly_name') }}"
+          icon_template: "{{ state_attr('sensor.swap_use_percent', 'icon') }}"
+          value_template: "{{ states('sensor.swap_use_percent') }}"
+
+  automation:
+    - alias: "AP down - power cycle"
+      id: c142c04781d045a199fbd9dfd866dac0
+      description: "Hjaltes AP er gået død - genstart det med en powercycle"
+      initial_state: true
+      mode: single
+      trigger:
+        - platform: state
+          entity_id: binary_sensor.ap_hjalte
+          from: "on"
+          for: "00:02:00"
+      action:
+        - service: switch.turn_off
+          data:
+            entity_id: switch.hjaltes_ap
+        - delay: 5
+        - service: switch.turn_on
+          data:
+            entity_id: switch.hjaltes_ap
+        - wait_template: "{{ is_state('binary_sensor.ap_hjalte', 'on') }}"
+          timeout: "00:05:00"
+        - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ not wait.completed }}"
+            sequence:
+              - service: notify.mobile_app_motorola_one_action
+                data:
+                  title: "AP nede"
+                  message: >
+                    Hjaltes AP er nede
+                  data:
+                    channel: Network
+                    importance: high
+
+  group:
+    access_points:
+      name: Access Points
+      icon: mdi:access-point-network
+      all: true
+      entities:
+        - binary_sensor.ap_hjalte
+        - binary_sensor.ap_kokken
+        - binary_sensor.ap_pigernes_stue
+        - binary_sensor.ap_stuen
+
+    rf_bridges:
+      name: RF Bridges
+      icon: mdi:radio-tower
+      all: true
+      entities:
+        - binary_sensor.kontor_rf
+        - binary_sensor.indgang_rf
+        - binary_sensor.pigernes_rf
+
+    ir_bridges:
+      name: IR Bridges
+      icon: mdi:radio-tower
+      all: true
+      entities:
+        - binary_sensor.gangen_ir
+        - binary_sensor.hjalte_ir
+        - binary_sensor.indgang_ir
+        - binary_sensor.kokken_ir
+        - binary_sensor.pigernes_ir
+        - binary_sensor.stuen_ir
+
+  binary_sensor:
+    - platform: ping
+      name: PRIVATE Router
+      host: 192.168.0.1
+      count: 1
+      scan_interval: 60
+
+    - platform: ping
+      name: PRIVATE Main switch
+      host: 192.168.0.3
+
+    - platform: ping
+      name: PRIVATE AP Hjalte
+      host: 192.168.0.6
+
+    - platform: ping
+      name: PRIVATE AP Pigernes stue
+      host: 192.168.0.7
+
+    - platform: ping
+      name: PRIVATE AP Køkken
+      host: 192.168.0.8
+
+    - platform: ping
+      name: PRIVATE AP Stuen
+      host: 192.168.0.9
+
+    - platform: ping
+      name: PRIVATE NAS
+      host: 192.168.0.10
+
+    - platform: ping
+      name: PRIVATE Proxy
+      host: 192.168.0.11
+
+    - platform: ping
+      name: PRIVATE Kontor RF
+      host: 192.168.0.31
+
+    - platform: ping
+      name: PRIVATE Indgang RF
+      host: 192.168.0.32
+
+    - platform: ping
+      name: PRIVATE Pigernes RF
+      host: 192.168.0.33
+
+    - platform: template
+      sensors:
+        router:
+          friendly_name: "Router"
+          unique_id: d0efc406169b4ce982d4fc98d8fc7f3c
+          value_template: "{{ states('binary_sensor.private_router') }}"
+          icon_template: "mdi:server-network{{ '-off' if is_state('binary_sensor.private_router', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_router', 'device_class') }}"
+
+        main_switch:
+          friendly_name: "Main Switch"
+          unique_id: 4206cf3f56c540c78805378386c4192f
+          value_template: "{{ states('binary_sensor.private_main_switch') }}"
+          icon_template: "mdi:server-network{{ '-off' if is_state('binary_sensor.private_main_switch', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_main_switch', 'device_class') }}"
+
+        ap_hjalte:
+          friendly_name: "Hjalte"
+          unique_id: b9378db95801415db93f00a7b3b125bb
+          value_template: "{{ states('binary_sensor.private_ap_hjalte') }}"
+          icon_template: "mdi:access-point-network{{ '-off' if is_state('binary_sensor.private_ap_hjalte', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_ap_hjalte', 'device_class') }}"
+
+        ap_pigernes_stue:
+          friendly_name: "Pigerne"
+          unique_id: c6a2848fe4f94657b36d154a0939d75e
+          value_template: "{{ states('binary_sensor.private_ap_pigernes_stue') }}"
+          icon_template: "mdi:access-point-network{{ '-off' if is_state('binary_sensor.private_ap_pigernes_stue', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_ap_pigernes_stue', 'device_class') }}"
+
+        ap_kokken:
+          friendly_name: "Køkken"
+          unique_id: d074b53bf9914a0e989f306802e62af6
+          value_template: "{{ states('binary_sensor.private_ap_kokken') }}"
+          icon_template: "mdi:access-point-network{{ '-off' if is_state('binary_sensor.private_ap_kokken', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_ap_kokken', 'device_class') }}"
+
+        ap_stuen:
+          friendly_name: "Stuen"
+          unique_id: d7e723d3312a48d58917d527e0fc7dae
+          value_template: "{{ states('binary_sensor.private_ap_stuen') }}"
+          icon_template: "mdi:access-point-network{{ '-off' if is_state('binary_sensor.private_ap_stuen', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_ap_stuen', 'device_class') }}"
+
+        nas:
+          friendly_name: "NAS"
+          unique_id: e5a927e871b84b7cbcafb1ad3081eedb
+          value_template: "{{ states('binary_sensor.private_nas') }}"
+          icon_template: "mdi:server-network{{ '-off' if is_state('binary_sensor.private_nas', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_nas', 'device_class') }}"
+
+        proxy:
+          friendly_name: "Proxy"
+          unique_id: 75084252c7844cb18aca370293155344
+          value_template: "{{ states('binary_sensor.private_proxy') }}"
+          icon_template: "mdi:server-network{{ '-off' if is_state('binary_sensor.private_proxy', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_proxy', 'device_class') }}"
+
+        kontor_rf:
+          friendly_name: "Kontor RF"
+          unique_id: c1c59c112efa42579e7507084ff33ff2
+          value_template: "{{ states('binary_sensor.private_kontor_rf') }}"
+          icon_template: "mdi:remote{{ '-off' if is_state('binary_sensor.private_kontor_rf', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_kontor_rf', 'device_class') }}"
+
+        indgang_rf:
+          friendly_name: "Indgang RF"
+          unique_id: b6b26b2485e04e87a2293c9c678c827b
+          value_template: "{{ states('binary_sensor.private_indgang_rf') }}"
+          icon_template: "mdi:remote{{ '-off' if is_state('binary_sensor.private_indgang_rf', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_indgang_rf', 'device_class') }}"
+
+        pigernes_rf:
+          friendly_name: "Pigernes RF"
+          unique_id: 99fdcac6a1234a82ab186a0401a441b5
+          value_template: "{{ states('binary_sensor.private_pigernes_rf') }}"
+          icon_template: "mdi:remote{{ '-off' if is_state('binary_sensor.private_pigernes_rf', 'off') }}"
+          attribute_templates:
+            device_class: "{{ state_attr('binary_sensor.private_pigernes_rf', 'device_class') }}"
+
+        gangen_ir:
+          friendly_name: "Gangen IR"
+          unique_id: 5af3f3ffa7f54f72bcf28c2b7a6c3f1f
+          value_template: "{{ 'off' if is_state('remote.gangen_ir', 'unavailable') else states('remote.gangen_ir') }}"
+          icon_template: "mdi:remote{{ '-off' if not is_state('remote.gangen_ir', 'on') }}"
+          attribute_templates:
+            device_class: "connectivity"
+
+        hjalte_ir:
+          friendly_name: "Hjalte IR"
+          unique_id: afd91be7e9d54e938d385c9fe6a8fb2f
+          value_template: "{{ 'off' if is_state('remote.hjalte_ir', 'unavailable') else states('remote.hjalte_ir') }}"
+          icon_template: "mdi:remote{{ '-off' if not is_state('remote.hjalte_ir', 'on') }}"
+          attribute_templates:
+            device_class: "connectivity"
+
+        indgang_ir:
+          friendly_name: "Indgang IR"
+          unique_id: 0c926d24c3f84f3ebfe2aab58511d23b
+          value_template: "{{ 'off' if is_state('remote.indgang_ir', 'unavailable') else states('remote.indgang_ir') }}"
+          icon_template: "mdi:remote{{ '-off' if not is_state('remote.indgang_ir', 'on') }}"
+          attribute_templates:
+            device_class: "connectivity"
+
+        kokken_ir:
+          friendly_name: "Køkken IR"
+          unique_id: d914fee5979e47789f9d4e2c8f796297
+          value_template: "{{ 'off' if is_state('remote.kokken_ir', 'unavailable') else states('remote.kokken_ir') }}"
+          icon_template: "mdi:remote{{ '-off' if not is_state('remote.kokken_ir', 'on') }}"
+          attribute_templates:
+            device_class: "connectivity"
+
+        pigernes_ir:
+          friendly_name: "Pigernes IR"
+          unique_id: 0dcae0fab5e04727b5b5e66d7fff6e99
+          value_template: "{{ 'off' if is_state('remote.pigernes_ir', 'unavailable') else states('remote.pigernes_ir') }}"
+          icon_template: "mdi:remote{{ '-off' if not is_state('remote.pigernes_ir', 'on') }}"
+          attribute_templates:
+            device_class: "connectivity"
+            
+        stuen_ir:
+          friendly_name: "Stuen IR"
+          unique_id: bb0c1d10c4104865b1948a9705a5fd11
+          value_template: "{{ 'off' if is_state('remote.stuen_ir', 'unavailable') else states('remote.stuen_ir') }}"
+          icon_template: "mdi:remote{{ '-off' if not is_state('remote.stuen_ir', 'on') }}"
+          attribute_templates:
+            device_class: "connectivity"
